@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -17,7 +16,10 @@ public class ConsecutiveHops : MonoBehaviour
     private bool activeJumpType = true;
     private bool jumpSequenceActive = false;
     private int jumpCount = 5;
+    private float timeInJump = 0;
 
+    [SerializeField]
+    private float targetConfirmRange = 1;
     [SerializeField]
     private float gravityModifier = 5;
     [SerializeField]
@@ -50,12 +52,14 @@ public class ConsecutiveHops : MonoBehaviour
         if (jumpCount <= 0)
         {
             Debug.Log("No Jumps Remaining");
+            UI.instance.SetInfoText("No Jumps Remaining");
             return;
         }
 
         if (!TestJump(hopTracker.Peek().position, activePosition, activeJumpType))
         {
             Debug.Log("Jump is not possible");
+            UI.instance.SetInfoText("Jump is not possible");
             return;
         }
 
@@ -65,6 +69,8 @@ public class ConsecutiveHops : MonoBehaviour
         jumpCount--;
         activePosition = Vector3.one * -1000;
         UI.instance.UpdateJumpCount(jumpCount);
+        UI.instance.SetInfoText("");
+        Debug.Log(hops.Count);
     }
 
     public void StartJumpSequence()
@@ -80,7 +86,7 @@ public class ConsecutiveHops : MonoBehaviour
     {
         FiringSolution fs = new FiringSolution();
         fs.useMaxTime = jumpType;
-        Nullable<Vector3> aimVector = fs.Calculate(startPosition, targetPosition, launchForce, Physics.gravity);
+        Nullable<Vector3> aimVector = fs.Calculate(startPosition, targetPosition, launchForce - 3, Physics.gravity);
         return aimVector.HasValue;
     }
 
@@ -89,7 +95,7 @@ public class ConsecutiveHops : MonoBehaviour
         FiringSolution fs = new FiringSolution();
         fs.useMaxTime = jumpType;
         
-        Nullable<Vector3> aimVector = fs.Calculate(hops.Peek().position, position, launchForce, Physics.gravity);
+        Nullable<Vector3> aimVector = fs.Calculate(hopTracker.Peek().position, position, launchForce - 3, Physics.gravity);
         if (aimVector.HasValue)
         {
             hops.Enqueue(new JumpTarget(position, jumpType));
@@ -99,6 +105,8 @@ public class ConsecutiveHops : MonoBehaviour
 
     private void Start()
     {
+        hopTracker.Clear();
+        hops.Clear();
         hops.Enqueue(new JumpTarget(playerRb.transform.position, true));
         hopTracker.Push(new JumpTarget(playerRb.transform.position, true));
         jumpCount = maxJumps;
@@ -124,15 +132,20 @@ public class ConsecutiveHops : MonoBehaviour
                 activeTargetMarker.transform.position = activePosition;
             }
         }
+
+        if (timeInJump >= 0)
+        {
+            timeInJump -= Time.deltaTime;
+        }
+        else if (jumpSequenceActive)
+        {
+            CheckForNextJump();
+        }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void CheckForNextJump()
     {
-        Debug.Log("Collision Occurred");
-        if (currentTarget == null)
-            return;
-
-        if (other.transform.tag == "Target" && jumpSequenceActive)
+        if (jumpSequenceActive && (transform.position - currentTarget.position).magnitude < targetConfirmRange)
         {
             if (hops.Count > 0)
             {
@@ -140,7 +153,6 @@ public class ConsecutiveHops : MonoBehaviour
             }
             else
             {
-                Debug.Log("Time to reset");
                 ResetJumps();
             }
         }
@@ -148,7 +160,7 @@ public class ConsecutiveHops : MonoBehaviour
 
     private void DoJump()
     {
-
+        Debug.Log("DoJump Called");
         currentTarget = hops.Peek();
 
         FiringSolution fs = new FiringSolution();
@@ -176,6 +188,7 @@ public class ConsecutiveHops : MonoBehaviour
             Destroy(marker);    
         }
         targetMarkers.Clear();
+        Destroy(activeTargetMarker);
         activeTargetMarker = Instantiate(targetMarkerVisual, activePosition, Quaternion.identity);
         hopTracker.Push(new JumpTarget(playerRb.transform.position, true));
         hops.Enqueue(new JumpTarget(playerRb.transform.position, true));

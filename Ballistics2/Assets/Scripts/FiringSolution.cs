@@ -13,20 +13,20 @@ public class FiringSolution
         {
             return null;
         }
-        Debug.Log("Time to target: " + ttt);
+        //Debug.Log("Time to target: " + ttt);
 
         // return the firing vector
         //Vector3 delta = start - end;
         Vector3 delta = end - start;
-        Debug.Log("Vector to target: " + delta);
+        //Debug.Log("Vector to target: " + delta);
 
         Vector3 n1 = delta * 2;
         Vector3 n2 = gravity * (ttt.Value * ttt.Value);
         float d = 2 * muzzleV * ttt.Value;
         Vector3 solution = (n1 - n2) / d;
 
-        Debug.Log("solution = " + n1 + " - " + n2 + " / " + d);
-        Debug.Log("solution = " + solution);
+        //Debug.Log("solution = " + n1 + " - " + n2 + " / " + d);
+        //Debug.Log("solution = " + solution);
 
         return solution;
         //return ((delta * 2) - (gravity * (ttt.Value * ttt.Value))) / (2 * muzzleV * ttt.Value);
